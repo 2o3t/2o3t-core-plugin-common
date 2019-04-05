@@ -22,10 +22,12 @@ module.exports = function(app, opts) {
 
     const inner = {};
 
+    const ACTION_NAME = 'HEALTH_CHECKUP';
+
     // 上报
     inner.uploadStatus = async function(info) {
         try {
-            await app.context.Proxy('Health', Object.assign({
+            await app.context.Proxy(ACTION_NAME, Object.assign({
                 online: true,
                 platform: os.platform(),
                 hostname: os.hostname(),
@@ -47,7 +49,7 @@ module.exports = function(app, opts) {
 
     inner.register = async function(name, info) {
         const loadHelper = app.loadHelper;
-        const KEY = await loadHelper.cache.createKey('HEALTH_CHECKUP', `Servers@${name}`);
+        const KEY = await loadHelper.cache.createKey(ACTION_NAME, `Servers@${name}`);
         const old = await loadHelper.cache.get(KEY);
         await loadHelper.cache.set(KEY, info, CacheTime + 10); // 存3分钟
         return !old; // 新注册返回 true

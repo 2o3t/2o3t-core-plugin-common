@@ -47,14 +47,22 @@ function diff(key, schema, param, fnCb) {
                 throw new Error(`非法参数类型 ${key}`);
             } else if (Array.isArray(value.enum) && !value.enum.includes(v)) { // 验证枚举参数
                 throw new Error(`非法参数值 ${key}`);
-            } else if (value.email && !validator.isEmail(value.email)) { // 验证邮箱
+            } else if (value.email && !validator.isEmail(v)) { // 验证邮箱
                 throw new Error('非法邮箱格式');
-            } else if ((value.min || value.max) && !validator.isLength(v, { min: value.min || 0, max: value.max || 0 })) {
+            } else if ((value.min || value.max) && !validator.isLength(v, { min: value.min || 0, max: value.max || Number.MAX_VALUE })) {
                 // 验证长度
-                const min = value.min || 0;
-                const max = value.max || 0;
-                throw new Error(`非法长度, 请限制在 ${min}-${max} 个字符`);
-            } else if (value.regexp && value.regexp instanceof RegExp && !value.regexp.text(v)) {
+                const min = value.min;
+                const max = value.max;
+                if (!isNaN(min) && !isNaN(max)) {
+                    throw new Error(`非法长度, 请限制在 ${min}-${max} 个字符`);
+                } else if (!isNaN(min)) {
+                    throw new Error(`非法长度, 请限制在 ${min} 个字符以上`);
+                } else if (!isNaN(max)) {
+                    throw new Error(`非法长度, 请限制在 ${max} 个字符以内`);
+                } else {
+                    throw new Error('非法长度');
+                }
+            } else if (value.regexp && value.regexp instanceof RegExp && !value.regexp.test(v)) {
                 throw new Error(value.message || `非法参数格式 ${key}`);
             } else if (value.validator && typeof value.validator === 'function' && !value.validator(v)) {
                 throw new Error(value.message || `非法参数 ${key}`);

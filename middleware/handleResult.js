@@ -1,6 +1,7 @@
 'use strict';
 const assert = require('assert');
 const is = require('is-type-of');
+const _ = require('lodash');
 
 const RESPONSE_CODE = {
     Success: 200,
@@ -20,7 +21,21 @@ module.exports = function(app) {
     assert.ok(app);
 
     function hooksBody(body, ctx) {
-        ctx.body = body;
+        const code = body.code;
+        ctx.status = code;
+
+        let result = {};
+        if (body.data) {
+            if (typeof body.data === 'string') {
+                result.message = body.data;
+            } else {
+                result = body.data;
+            }
+        }
+        if (body.message) {
+            result.message = body.message;
+        }
+        ctx.body = result;
         // app.logger.info.hook(body);
     }
 
@@ -37,10 +52,14 @@ module.exports = function(app) {
      * @param {number} code - 默认为 ResponseCode.Invalid
      */
     app.context.setMsgError = function setMsgError(message, code = RESPONSE_CODE.Invalid) {
+        if (message && !isNaN(message.code)) { // 先重写 code;
+            code = message.code;
+        }
         if (!message) {
             message = codeMapMsg(code);
         } else if (message instanceof Error) {
-            app.logger.error(message);
+            message = message.message;
+        } else if (message.message) {
             message = message.message;
         }
         // 记录日志

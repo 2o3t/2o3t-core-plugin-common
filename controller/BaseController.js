@@ -140,9 +140,14 @@ class BaseController {
             const result = {
                 rows: alls,
                 count: allsCount,
-                page,
-                pageSize: size,
             };
+
+            if (page) {
+                result.page = parseInt(page);
+            }
+            if (size) {
+                result.pageSize = parseInt(size);
+            }
 
             ctx.setBodyResult(result);
         } catch (error) {

@@ -27,35 +27,36 @@ module.exports = function(app, opts) {
     const { scope, passphrase = '' } = serverConfig;
 
     app.context.Proxy = async function(Action, data, fixCb) {
-        const ctx = this;
-        const headers = {
-            ...ctx.headers,
-        };
-
-        if (ctx.reqId) {
-            headers['X-Request-Id'] = ctx.reqId;
-        }
-
-        // 前一个id
-        const spanId = ctx.get('X-SpanId');
-        if (spanId) {
-            headers['X-ParentId'] = spanId;
-        }
-        // 当前 id
-        if (ctx.spanId) {
-            headers['X-SpanId'] = ctx.spanId;
-
-            let tranceId = ctx.get('X-TranceId');
-            if (tranceId) {
-                tranceId = tranceId.split(',');
-            } else {
-                tranceId = [];
-            }
-            tranceId.push(ctx.spanId);
-            headers['X-TranceId'] = tranceId.join(',');
-        }
-
+        const headers = { };
         try {
+            const ctx = this;
+            if (ctx.headers) {
+                Object.assign(headers, ctx.headers);
+            }
+
+            if (ctx.reqId) {
+                headers['X-Request-Id'] = ctx.reqId;
+            }
+
+            // 前一个id
+            const spanId = ctx.get('X-SpanId');
+            if (spanId) {
+                headers['X-ParentId'] = spanId;
+            }
+            // 当前 id
+            if (ctx.spanId) {
+                headers['X-SpanId'] = ctx.spanId;
+
+                let tranceId = ctx.get('X-TranceId');
+                if (tranceId) {
+                    tranceId = tranceId.split(',');
+                } else {
+                    tranceId = [];
+                }
+                tranceId.push(ctx.spanId);
+                headers['X-TranceId'] = tranceId.join(',');
+            }
+
             const ip = ctx.agent && ctx.agent.IP;
             if (ip) {
                 headers['x-forwarded-for'] = ip;
@@ -95,8 +96,8 @@ module.exports = function(app, opts) {
                 data: bodyInfo,
             }));
 
-            if (result && result.data && result.data.code === 200) {
-                const data = result.data.data;
+            if (result && result.status === 200) {
+                const data = result.data;
                 return data;
             } else if (result && result.data && result.data.message) {
                 logger.warn(result.data.message);

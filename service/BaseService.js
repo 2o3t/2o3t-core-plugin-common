@@ -46,7 +46,7 @@ class BaseService {
         model = this.helper.validatorParam.bySchema(Schema, model);
         const result = await this.plugin.model[modelName]
             .create(model);
-        return !!result;
+        return !!result && result;
     }
 
     // 删除 (!!! IMPORTANT)
@@ -59,7 +59,7 @@ class BaseService {
                 }
             });
             return await this.plugin.model[modelName]
-                .findAndDelete({ _id: { $in: ids } }, { _id: true })
+                .findAndDelete({ _id: { $in: ids } })
                 .sort({ _id: -1 })
                 .exec();
         }
@@ -67,7 +67,7 @@ class BaseService {
             throw new Error('非法的 ID 参数');
         }
         return await this.plugin.model[modelName]
-            .findByIdAndDelete(ids, { _id: true })
+            .findByIdAndDelete(ids)
             .exec();
     }
 

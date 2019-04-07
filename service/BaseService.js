@@ -168,7 +168,7 @@ class BaseService {
             .exec();
     }
 
-    // 获取所有 {filters, page, size}
+    // 获取所有 {filters, page, size, sort}
     async getAll(oParam) {
         const modelName = this.context.modelName;
         if (!oParam) {
@@ -178,22 +178,27 @@ class BaseService {
         }
         const query = {};
         if (oParam && oParam.filters) {
-            Object.assign(query, formatFilterParams(oParam.filters));
+            const filters = Object.assign({}, oParam.filters);
+            Object.assign(query, formatFilterParams(filters));
         }
         let conditions = this.plugin.model[modelName].find(query, { password: false, __v: false });
         if (oParam && (oParam.page || oParam.size)) {
-            let page = 1;
+            let page = 0;
             let size = 20;
             if (oParam.page && !isNaN(oParam.page)) {
-                page = parseInt(oParam.page, 10);
+                page = parseInt(oParam.page, 10) - 1; // 外部标记从 1 开始, 数据库从 0 开始, 所以减 1
             }
             if (oParam.size && !isNaN(oParam.size)) {
                 size = parseInt(oParam.size, 10);
             }
             conditions = conditions.skip(page * size).limit(size);
         }
+        let sort = { _id: -1 };
+        if (oParam && oParam.sort && typeof oParam.sort === 'object') {
+            sort = oParam.sort || {};
+        }
         return await conditions
-            .sort({ _id: -1 })
+            .sort(sort)
             .exec();
     }
 
@@ -206,6 +211,13 @@ class BaseService {
         return this.plugin.model[modelName].count(query).exec();
     }
 
+
+    // 导出所有
+    async exportAll() {
+        const query = {};
+        const conditions = this.plugin.model.Reply.find(query);
+        return await conditions.exec();
+    }
 }
 
 module.exports = BaseService;

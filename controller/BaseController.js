@@ -8,12 +8,14 @@ const assert = require('assert');
  */
 class BaseController {
 
-    constructor(modelName) {
+    constructor(modelName, deleteBans) {
         this.modelName = modelName;
+        // { key: '', value: '' }
+        this.deleteBanList = deleteBans;
     }
 
     // 添加
-    async Create(ctx) {
+    async Create(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -27,20 +29,26 @@ class BaseController {
                 throw new Error('数据不存在');
             }
 
-            this.logger.set('operation', `${modelName} 创建成功`);
-            ctx.setBodyResult(info);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                this.logger.set('operation', `${modelName} 创建成功`);
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             // 名称被占用
             if (error.message.match('E11000 duplicate key')) {
-                ctx.setMsgError('名称被占用');
+                ctx.setMsgError('关键字被占用');
             } else {
                 ctx.setMsgError(error);
             }
         }
     }
 
-    async DeleteByID(ctx) {
+    async DeleteByID(ctx, next) {
         const modelName = this.context.modelName;
+        const deleteBanList = this.context.deleteBanList;
         assert.ok(ctx);
         try {
             const ID = ctx.query.id;
@@ -48,20 +56,40 @@ class BaseController {
                 throw new Error('ID不正确');
             }
 
+            if (deleteBanList) {
+                const info = await this.service[modelName].getByID(ID);
+                if (!info) {
+                    throw new Error('数据不存在');
+                }
+                if (deleteBanList.some(item => {
+                    if (typeof item === 'object') {
+                        return info[item.key] === item.value;
+                    }
+                    return false;
+                })) {
+                    throw new Error('数据禁止操作');
+                }
+            }
+
             const info = await this.service[modelName].deleteByID(ID);
             if (!info) {
                 throw new Error('数据不存在');
             }
 
-            // 成功
-            this.logger.set('operation', `${modelName} 删除成功`);
-            ctx.setBodyResult(ID);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = ID;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 删除成功`);
+                ctx.setBodyResult(ID);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async UpdateByID(ctx) {
+    async UpdateByID(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -81,14 +109,20 @@ class BaseController {
                 throw new Error('数据不存在');
             }
 
-            this.logger.set('operation', `${modelName} 更新成功`);
-            ctx.setBodyResult(info);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 更新成功`);
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async GetByID(ctx) {
+    async GetByID(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -100,14 +134,20 @@ class BaseController {
             if (!info) {
                 throw new Error('数据不存在');
             }
-            // 成功
-            ctx.setBodyResult(info);
+
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async GetAllByPage(ctx) {
+    async GetAllByPage(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -149,13 +189,19 @@ class BaseController {
                 result.pageSize = parseInt(size);
             }
 
-            ctx.setBodyResult(result);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = result;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                ctx.setBodyResult(result);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async GetAllCount(ctx) {
+    async GetAllCount(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -174,7 +220,14 @@ class BaseController {
             }
             // 成功
             const result = allsCount;
-            ctx.setBodyResult(result);
+
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = result;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                ctx.setBodyResult(result);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }

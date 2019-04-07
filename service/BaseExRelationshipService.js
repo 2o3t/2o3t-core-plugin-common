@@ -15,15 +15,24 @@ class BaseExRelationshipService extends BaseExService {
         const relationshipModelName = this.context.relationshipModelName;
         const relationshipModelKey = this.context.relationshipModelKey;
         const RelationshipModel = this.plugin.model[relationshipModelName];
+        const modelName = this.context.modelName;
+        const Model = this.plugin.model[modelName];
 
         const result = await super.create(model);
         if (result && RelationshipModel) {
             // 校验
             const value = result[relationshipModelKey];
             if (value) {
-                const Schema = this.plugin.model.$schemas[relationshipModelName];
-                const model = this.helper.validatorParam.bySchema(Schema, { [relationshipModelKey]: value });
-                await RelationshipModel.create(model);
+                try {
+                    const Schema = this.plugin.model.$schemas[relationshipModelName];
+                    const model = this.helper.validatorParam.bySchema(Schema, { [relationshipModelKey]: value });
+                    await RelationshipModel.create(model);
+                } catch (error) {
+                    await Model
+                        .findByIdAndDelete(result._id)
+                        .exec();
+                    throw error;
+                }
             }
         }
         return !!result && result;
@@ -55,6 +64,20 @@ class BaseExRelationshipService extends BaseExService {
     // 批量删除 (!!! IMPORTANT)
     async deleteByIDs(ids) {
         return this.deleteByID(ids);
+    }
+
+    async updateByID(id, model) {
+        const relationshipModelKey = this.context.relationshipModelKey;
+        // 删除关联的关键字
+        delete model[relationshipModelKey];
+        return await super.updateByID(id, model);
+    }
+
+    async updateByParam(param, model) {
+        const relationshipModelKey = this.context.relationshipModelKey;
+        // 删除关联的关键字
+        delete model[relationshipModelKey];
+        return await super.updateByParam(param, model);
     }
 }
 

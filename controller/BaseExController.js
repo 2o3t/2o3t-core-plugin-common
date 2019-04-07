@@ -9,8 +9,9 @@ const BaseController = require('./BaseController');
  */
 class BaseExController extends BaseController {
 
-    async DeleteByIDs(ctx) {
+    async DeleteByIDs(ctx, next) {
         const modelName = this.context.modelName;
+        const deleteBanList = this.context.deleteBanList;
         assert.ok(ctx);
         try {
             const IDs = ctx.query.ids;
@@ -18,20 +19,43 @@ class BaseExController extends BaseController {
                 throw new Error('ID不正确');
             }
 
+            if (deleteBanList) {
+                const info = await this.service[modelName].getByIDs(IDs);
+                if (!info) {
+                    throw new Error('数据不存在');
+                }
+                if (deleteBanList.some(item => {
+                    if (typeof item === 'object') {
+                        if (Array.isArray(info)) {
+                            return info.some(i => i[item.key] === item.value);
+                        }
+                        return info[item.key] === item.value;
+                    }
+                    return false;
+                })) {
+                    throw new Error('数据禁止操作');
+                }
+            }
+
             const info = await this.service[modelName].dseleteByIDs(IDs);
             if (!info) {
                 throw new Error('数据不存在');
             }
 
-            // 成功
-            this.logger.set('operation', `${modelName} 批量删除成功`);
-            ctx.setBodyResult(IDs);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = IDs;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 批量删除成功`);
+                ctx.setBodyResult(IDs);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async UpdateByParam(ctx) {
+    async UpdateByParam(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -51,14 +75,20 @@ class BaseExController extends BaseController {
                 throw new Error('数据不存在');
             }
 
-            this.logger.set('operation', `${modelName} 更新成功`);
-            ctx.setBodyResult(info);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 更新成功`);
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async GetByIDs(ctx) {
+    async GetByIDs(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -70,15 +100,21 @@ class BaseExController extends BaseController {
             if (!info) {
                 throw new Error('数据不存在');
             }
-            // 成功
-            this.logger.set('operation', `${modelName} 获取成功`);
-            ctx.setBodyResult(info);
+
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 获取成功`);
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }
     }
 
-    async GetByParam(ctx) {
+    async GetByParam(ctx, next) {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
@@ -93,8 +129,14 @@ class BaseExController extends BaseController {
                 throw new Error('数据不存在');
             }
 
-            this.logger.set('operation', `${modelName} 获取成功`);
-            ctx.setBodyResult(info);
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
+                this.logger.set('operation', `${modelName} 获取成功`);
+                ctx.setBodyResult(info);
+            }
         } catch (error) {
             ctx.setMsgError(error);
         }

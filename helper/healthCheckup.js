@@ -45,6 +45,15 @@ module.exports = function(app, opts) {
                 'name', 'ip', 'port', 'url', 'scope', 'passphrase',
             ]));
         });
+
+        // 首次启动 3s 后请求
+        process.nextTick(() => {
+            setTimeout(async () => {
+                await inner.uploadStatus(_.pick(serverConfig, [
+                    'name', 'ip', 'port', 'url', 'scope', 'passphrase',
+                ]));
+            }, 3000);
+        });
     }
 
     inner.register = async function(name, info) {

@@ -31,10 +31,12 @@ class BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
-                this.logger.set('operation', `${modelName} 创建成功`);
-                ctx.setBodyResult(info);
+                ctx.setBodyResult({ ID: info._id });
             }
         } catch (error) {
             // 名称被占用
@@ -76,13 +78,16 @@ class BaseController {
                 throw new Error('数据不存在');
             }
 
+            const result = { ID };
             if (ctx.state._NeedNext_) {
-                ctx.state._LastResult_ = ID;
+                ctx.state._LastResult_ = result;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(result);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 删除成功`);
-                ctx.setBodyResult(ID);
+                ctx.setBodyResult(result);
             }
         } catch (error) {
             ctx.setMsgError(error);
@@ -103,6 +108,7 @@ class BaseController {
                 throw new Error('没有参数');
             }
 
+            const result = { ID };
             // 更新
             const info = await this.service[modelName].updateByID(ID, bodyInfo);
             if (!info) {
@@ -111,11 +117,13 @@ class BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 更新成功`);
-                ctx.setBodyResult(info);
+                ctx.setBodyResult(result);
             }
         } catch (error) {
             ctx.setMsgError(error);
@@ -137,6 +145,9 @@ class BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
@@ -176,6 +187,18 @@ class BaseController {
             if (!allsCount) {
                 allsCount = 0;
             }
+
+            // 减少传输
+            alls.forEach(item => {
+                Object.keys(item).forEach(key => {
+                    if (typeof item[key] === 'string') {
+                        if (item[key].length > 200) {
+                            item[key] = item[key].substr(0, 200);
+                        }
+                    }
+                });
+            });
+
             // 成功
             const result = {
                 rows: alls,
@@ -191,6 +214,9 @@ class BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = result;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(result);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
@@ -223,6 +249,9 @@ class BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = result;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(result);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功

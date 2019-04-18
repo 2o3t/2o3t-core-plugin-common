@@ -14,7 +14,11 @@ class BaseExController extends BaseController {
         const deleteBanList = this.context.deleteBanList;
         assert.ok(ctx);
         try {
-            const IDs = ctx.query.ids;
+            let IDs = ctx.query.ids;
+            if (!IDs || !IDs.indexOf(',')) {
+                throw new Error('ID不正确');
+            }
+            IDs = IDs.split(',');
             if (!IDs || !Array.isArray(IDs) || IDs.some(ID => !validator.isMongoId(ID))) {
                 throw new Error('ID不正确');
             }
@@ -44,10 +48,12 @@ class BaseExController extends BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = IDs;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(IDs);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 批量删除成功`);
                 ctx.setBodyResult(IDs);
             }
         } catch (error) {
@@ -77,11 +83,13 @@ class BaseExController extends BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 更新成功`);
-                ctx.setBodyResult(info);
+                ctx.setBodyResult(param);
             }
         } catch (error) {
             ctx.setMsgError(error);
@@ -92,10 +100,15 @@ class BaseExController extends BaseController {
         const modelName = this.context.modelName;
         assert.ok(ctx);
         try {
-            const IDs = ctx.query.ids;
+            let IDs = ctx.query.ids;
+            if (!IDs || !IDs.indexOf(',')) {
+                throw new Error('ID不正确');
+            }
+            IDs = IDs.split(',');
             if (!IDs || !Array.isArray(IDs) || IDs.some(ID => !validator.isMongoId(ID))) {
                 throw new Error('ID不正确');
             }
+
             const info = await this.service[modelName].getByIDs(IDs);
             if (!info) {
                 throw new Error('数据不存在');
@@ -103,10 +116,12 @@ class BaseExController extends BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 获取成功`);
                 ctx.setBodyResult(info);
             }
         } catch (error) {
@@ -131,10 +146,56 @@ class BaseExController extends BaseController {
 
             if (ctx.state._NeedNext_) {
                 ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
                 await next(); // 跳转至下一步
             } else {
                 // 成功
-                this.logger.set('operation', `${modelName} 获取成功`);
+                ctx.setBodyResult(info);
+            }
+        } catch (error) {
+            ctx.setMsgError(error);
+        }
+    }
+
+    async GetByParams(ctx, next) {
+        const modelName = this.context.modelName;
+        assert.ok(ctx);
+        try {
+            const param = ctx.query;
+            if (!param || typeof param !== 'object') {
+                throw new Error('Params 不正确');
+            }
+
+            const keys = Object.keys(param);
+            const params = keys.reduce((arr, key) => {
+                let val = param[key];
+                if (val && val.indexOf(',')) {
+                    val = val.split(',');
+                }
+                if (Array.isArray(val)) {
+                    return arr.concat(val.map(v => {
+                        return { [key]: v };
+                    }));
+                }
+                return arr.concat([{ [key]: val }]);
+            }, []);
+
+            // 更新
+            const info = await this.service[modelName].getByParams(params);
+            if (!info) {
+                throw new Error('数据不存在');
+            }
+
+            if (ctx.state._NeedNext_) {
+                ctx.state._LastResult_ = info;
+                if (Array.isArray(ctx.state._NeedNext_)) {
+                    ctx.state._NeedNext_.push(info);
+                }
+                await next(); // 跳转至下一步
+            } else {
+                // 成功
                 ctx.setBodyResult(info);
             }
         } catch (error) {

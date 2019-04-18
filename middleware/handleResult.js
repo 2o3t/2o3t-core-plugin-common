@@ -20,6 +20,7 @@ const RESPONSE_CODE = {
 module.exports = function(app) {
     assert.ok(app);
 
+    // 统一格式 BODY
     function hooksBody(body, ctx) {
         const code = body.code;
         ctx.status = code;
@@ -27,20 +28,25 @@ module.exports = function(app) {
         let result = {};
         if (body.data) {
             if (typeof body.data === 'string') {
-                result.message = body.data;
+                result.Message = body.data;
             } else {
                 result = body.data;
             }
         }
         if (body.message) {
-            result.message = body.message;
+            result.Message = body.message;
+        }
+
+        const RequestId = ctx.reqId;
+        if (RequestId) {
+            result.RequestId = RequestId;
         }
         ctx.body = result;
         // app.logger.info.hook(body);
     }
 
     function hooksErrorMsg(message) {
-        app.logger.set('operation', message);
+        app.logger.set('SYSTEM_MESSAGE', message);
     }
 
     // 全局

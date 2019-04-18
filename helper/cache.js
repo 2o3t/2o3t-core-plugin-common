@@ -46,8 +46,12 @@ module.exports = function(app) {
         const redis = app.loadHelper.redis;
         const aKey = await redis.keys(key);
         if (!!aKey && aKey.length > 0) {
-            return await redis.mget(aKey);
+            const datas = await redis.mget(aKey);
+            if (datas && Array.isArray(datas)) {
+                return datas.map(data => JSON.parse(data));
+            }
         }
+        return [];
     };
     Cache.getAll = getAll;
 

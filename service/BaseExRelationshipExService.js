@@ -1,9 +1,9 @@
 'use strict';
 
-const BaseService = require('./BaseService');
+const BaseExRelationshipService = require('./BaseExRelationshipService');
 
-// 增强
-class BaseExService extends BaseService {
+// 增强 伴生关系
+class BaseExRelationshipExService extends BaseExRelationshipService {
 
     // 批量删除 (!!! IMPORTANT)
     async deleteByIDs(ids) {
@@ -17,7 +17,6 @@ class BaseExService extends BaseService {
     async getByParams(params) {
         return await super.getByParam(params);
     }
-
 }
 
-module.exports = BaseExService;
+module.exports = BaseExRelationshipExService;

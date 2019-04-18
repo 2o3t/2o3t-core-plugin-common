@@ -49,10 +49,10 @@ function diff(key, schema, param, fnCb) {
                 throw new Error(`非法参数值 ${key}`);
             } else if (value.email && !validator.isEmail(v)) { // 验证邮箱
                 throw new Error('非法邮箱格式');
-            } else if ((value.min || value.max) && !validator.isLength(v, { min: value.min || 0, max: value.max || Number.MAX_VALUE })) {
+            } else if ((value.minlength || value.maxlength) && !validator.isLength(v, { min: value.minlength || 0, max: value.maxlength || Number.MAX_VALUE })) {
                 // 验证长度
-                const min = value.min;
-                const max = value.max;
+                const min = value.minlength;
+                const max = value.maxlength;
                 if (!isNaN(min) && !isNaN(max)) {
                     throw new Error(`非法长度, 请限制在 ${min}-${max} 个字符`);
                 } else if (!isNaN(min)) {
@@ -62,14 +62,10 @@ function diff(key, schema, param, fnCb) {
                 } else {
                     throw new Error('非法长度');
                 }
-            } else if (value.regexp && value.regexp instanceof RegExp && !value.regexp.test(v)) {
-                throw new Error(value.message || `非法参数格式 ${key}`);
-            } else if (value.validator && typeof value.validator === 'function' && !value.validator(v)) {
-                throw new Error(value.message || `非法参数 ${key}`);
             } else if (fnCb && typeof fnCb === 'function') {
                 const result = fnCb(v, key, value);
-                if (!result) {
-                    throw new Error(`非法参数 ${key}`);
+                if (result !== true) {
+                    throw new Error(result && result.message || `非法参数 ${key}`);
                 }
             }
         }

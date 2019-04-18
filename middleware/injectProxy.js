@@ -2,18 +2,16 @@
 const assert = require('assert');
 const axios = require('axios').default;
 const querystring = require('querystring');
-const uuid = require('uuid');
+const url = require('url');
 
 module.exports = function(app, opts) {
     assert.ok(app);
     assert.ok(opts);
+    const logger = app.logger;
 
     const _requestActionMap = opts.$requestActionMap;
-
     // 外部配置引入的
     const requestActionMap = opts.requestActionMap || {};
-
-    const logger = app.logger;
 
     const config = app.config;
     const serverConfig = opts.serverConfig || config.server;
@@ -26,44 +24,24 @@ module.exports = function(app, opts) {
     // scope+passphrase
     const { scope, passphrase = '' } = serverConfig;
 
+
     app.context.Proxy = async function(Action, data, fixCb) {
         const headers = { };
         try {
             const ctx = this;
-            if (ctx.headers) {
-                Object.assign(headers, ctx.headers);
-            }
-
-            if (ctx.reqId) {
-                headers['X-Request-Id'] = ctx.reqId;
-            }
-
-            // 前一个id
-            const spanId = ctx.get('X-SpanId');
-            if (spanId) {
-                headers['X-ParentId'] = spanId;
-            }
-            // 当前 id
-            if (ctx.spanId) {
-                headers['X-SpanId'] = ctx.spanId;
-
-                let tranceId = ctx.get('X-TranceId');
-                if (tranceId) {
-                    tranceId = tranceId.split(',');
-                } else {
-                    tranceId = [];
-                }
-                tranceId.push(ctx.spanId);
-                headers['X-TranceId'] = tranceId.join(',');
-            }
 
             const ip = ctx.agent && ctx.agent.IP;
             if (ip) {
                 headers['x-forwarded-for'] = ip;
             }
-            const ua = ctx.get ? ctx.get('user-agent') : ctx.headers['user-agent'];
-            if (ua) {
-                headers['user-agent'] = ua;
+
+            if (ctx.headers) {
+                const tempHeaders = Object.assign({}, ctx.headers);
+                Object.keys(headers).forEach(key => { // 移除小写的不正规的
+                    delete tempHeaders[key];
+                    delete tempHeaders[key.toLowerCase()];
+                });
+                Object.assign(headers, tempHeaders);
             }
         } catch (error) {
             // 报错应该属于内部调用... 不做处理
@@ -78,7 +56,36 @@ module.exports = function(app, opts) {
             params.url = `${params.url}?${query}`;
             data = {};
         }
-        params.headers = Object.assign({}, headers, {
+        if (!params.headers) {
+            params.headers = {};
+        }
+
+        // 网关
+        if (params.gateway && typeof params.gateway === 'function') {
+            params.gateway(params.headers);
+        }
+        delete params.gateway;
+
+        if (params.url) {
+            // 自动加入 host
+            try {
+                const URL = url.parse(params.url);
+                if (URL) {
+                    const host = URL.host;
+                    if (host && /[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+/.test(host)) {
+                        params.headers.Host = host;
+                    }
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        }
+
+        Object.keys(params.headers).forEach(key => { // 移除小写的不正规的
+            delete headers[key];
+            delete headers[key.toLowerCase()];
+        });
+        Object.assign(params.headers, headers, {
             'X-Authorization-Scope': scope,
             'X-Passphrase': passphrase,
         });
@@ -91,21 +98,19 @@ module.exports = function(app, opts) {
 
         const bodyInfo = data || {};
 
-        try {
-            const result = await axios(Object.assign({}, params, {
-                data: bodyInfo,
-            }));
+        const result = await axios(Object.assign({}, params, {
+            data: bodyInfo,
+        }));
 
-            if (result && result.status === 200) {
-                const data = result.data;
-                return data;
-            } else if (result && result.data && result.data.message) {
-                logger.warn(result.data.message);
-            } else {
-                logger.error(`${Action} 非法远程请求`);
-            }
-        } catch (error) {
-            logger.error(`${Action} 远程请求异常`, error);
+        if (result && result.status === 200) {
+            const data = result.data;
+            return data;
+        } else if (result && result.data && result.data.Message) {
+            throw new Error(result.data.Message);
+        } else if (result && result.data && result.data.message) {
+            throw new Error(result.data.message);
+        } else {
+            throw new Error(`${Action} 非法远程请求`);
         }
     };
 

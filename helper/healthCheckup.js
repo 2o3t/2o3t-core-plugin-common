@@ -25,34 +25,48 @@ module.exports = function(app, opts) {
     const ACTION_NAME = 'HEALTH_CHECKUP';
 
     // 上报
-    inner.uploadStatus = async function(info) {
+    inner.uploadStatus = function(info) {
         try {
-            await app.context.Proxy(ACTION_NAME, Object.assign({
+            app.context.Proxy(ACTION_NAME, Object.assign({
                 online: true,
                 platform: os.platform(),
                 hostname: os.hostname(),
                 cwd: process.cwd(),
             }, info));
         } catch (error) {
-            app.logger.error('上报健康检查失败!', error);
+            app.logger.warn('上报健康检查失败!', error);
         }
     };
 
     if (bHealth && serverConfig) {
+        const info = _.pick(serverConfig, [
+            'name', 'ip', 'port', 'url', 'scope', 'passphrase',
+        ]);
+
         // 每 3 分钟一次
-        schedule.scheduleJob(TIME, async function() {
-            await inner.uploadStatus(_.pick(serverConfig, [
-                'name', 'ip', 'port', 'url', 'scope', 'passphrase',
-            ]));
+        schedule.scheduleJob(TIME, function() {
+            inner.uploadStatus(info);
         });
 
-        // 首次启动 3s 后请求
+        // 首次启动 10s 后请求
         process.nextTick(() => {
-            setTimeout(async () => {
-                await inner.uploadStatus(_.pick(serverConfig, [
-                    'name', 'ip', 'port', 'url', 'scope', 'passphrase',
-                ]));
-            }, 3000);
+            setTimeout(() => {
+                inner.uploadStatus(info);
+            }, 10 * 1000);
+        });
+
+        // 异常未捕获上报
+        process.on('uncaughtException', function(e) {
+            inner.uploadStatus({
+                ...info,
+                error: e,
+            });
+        });
+        process.on('exit', function() {
+            inner.uploadStatus({
+                ...info,
+                online: false,
+            });
         });
     }
 
@@ -62,6 +76,13 @@ module.exports = function(app, opts) {
         const old = await loadHelper.cache.get(KEY);
         await loadHelper.cache.set(KEY, info, CacheTime + 10); // 存3分钟
         return !old; // 新注册返回 true
+    };
+
+    // 获取全部
+    inner.infos = async function() {
+        const loadHelper = app.loadHelper;
+        const KEY = await loadHelper.cache.createKey(ACTION_NAME, 'Servers@*');
+        return await loadHelper.cache.getAll(KEY);
     };
 
     return inner;

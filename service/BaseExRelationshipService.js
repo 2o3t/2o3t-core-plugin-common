@@ -61,11 +61,6 @@ class BaseExRelationshipService extends BaseExService {
         return !!result && result;
     }
 
-    // 批量删除 (!!! IMPORTANT)
-    async deleteByIDs(ids) {
-        return this.deleteByID(ids);
-    }
-
     async updateByID(id, model) {
         const relationshipModelKey = this.context.relationshipModelKey;
         // 删除关联的关键字
@@ -78,6 +73,115 @@ class BaseExRelationshipService extends BaseExService {
         // 删除关联的关键字
         delete model[relationshipModelKey];
         return await super.updateByParam(param, model);
+    }
+
+    async getByID(ids) {
+        const relationshipModelName = this.context.relationshipModelName;
+        const relationshipModelKey = this.context.relationshipModelKey;
+        const RelationshipModel = this.plugin.model[relationshipModelName];
+        const RelationshipService = this.service[relationshipModelName];
+
+        const result = await super.getByID(ids);
+        if (result && RelationshipModel && RelationshipService) {
+            if (Array.isArray(result)) {
+                const value = result.map(item => item[relationshipModelKey]).filter(item => !!item);
+                if (value && value.length) {
+                    try {
+                        const params = value.map(item => { return { [relationshipModelKey]: item }; });
+                        const relationshipInfos = await RelationshipService.getByParams(params);
+                        if (!relationshipInfos || !relationshipInfos.length) throw new Error();
+                        result.forEach(item => {
+                            const relationshipInfo = relationshipInfos.find(k => k[relationshipModelKey] === item[relationshipModelKey]);
+                            if (relationshipInfo) {
+                                item._relationship = relationshipInfo;
+                            }
+                        });
+                    } catch (error) {
+                        // donothing
+                    }
+                }
+            } else {
+                if (result) {
+                    try {
+                        const param = { [relationshipModelKey]: result[relationshipModelKey] };
+                        const relationshipInfo = await RelationshipService.getByParam(param);
+                        if (!relationshipInfo) throw new Error();
+                        result._relationship = relationshipInfo;
+                    } catch (error) {
+                        // donothing
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    async getByParam(params) {
+        const relationshipModelName = this.context.relationshipModelName;
+        const relationshipModelKey = this.context.relationshipModelKey;
+        const RelationshipModel = this.plugin.model[relationshipModelName];
+        const RelationshipService = this.service[relationshipModelName];
+
+        const result = await super.getByParam(params);
+        if (result && RelationshipModel && RelationshipService) {
+            if (Array.isArray(result)) {
+                const value = result.map(item => item[relationshipModelKey]).filter(item => !!item);
+                if (value && value.length) {
+                    try {
+                        const params = value.map(item => { return { [relationshipModelKey]: item }; });
+                        const relationshipInfos = await RelationshipService.getByParams(params);
+                        if (!relationshipInfos || !relationshipInfos.length) throw new Error();
+                        result.forEach(item => {
+                            const relationshipInfo = relationshipInfos.find(k => k[relationshipModelKey] === item[relationshipModelKey]);
+                            if (relationshipInfo) { item._relationship = relationshipInfo; }
+                        });
+                    } catch (error) {
+                        // donothing
+                    }
+                }
+            } else {
+                if (result) {
+                    try {
+                        const param = { [relationshipModelKey]: result[relationshipModelKey] };
+                        const relationshipInfo = await RelationshipService.getByParam(param);
+                        if (!relationshipInfo) throw new Error();
+                        result._relationship = relationshipInfo;
+                    } catch (error) {
+                        // donothing
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    async getAll(oParam) {
+        const relationshipModelName = this.context.relationshipModelName;
+        const relationshipModelKey = this.context.relationshipModelKey;
+        const RelationshipModel = this.plugin.model[relationshipModelName];
+        const RelationshipService = this.service[relationshipModelName];
+
+        const result = await super.getAll(oParam);
+        if (result && RelationshipModel && RelationshipService) {
+            const value = result.map(item => item[relationshipModelKey]).filter(item => !!item);
+            if (value && value.length) {
+                try {
+                    const params = value.map(item => { return { [relationshipModelKey]: item }; });
+                    const relationshipInfos = await RelationshipService.getByParams(params);
+                    if (!relationshipInfos || !relationshipInfos.length) throw new Error();
+                    result.forEach(item => {
+                        const relationshipInfo = relationshipInfos.find(k => k[relationshipModelKey] === item[relationshipModelKey]);
+                        if (relationshipInfo) { item._relationship = relationshipInfo; }
+                    });
+                } catch (error) {
+                    // donothing
+                }
+            }
+        }
+
+        return result;
     }
 }
 

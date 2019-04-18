@@ -1,7 +1,7 @@
 'use strict';
 
 const assert = require('assert');
-const uuid = require('uuid');
+const uuid = require('uuid').v4;
 
 module.exports = function(app) {
     assert.ok(app);
@@ -21,21 +21,13 @@ module.exports = function(app) {
     };
 
     const formatRequestMessage = function(ctx) {
-        const reqId = ctx.get('X-Request-Id') || uuid.v4();
-        ctx.reqId = reqId;
-        const spanId = uuid.v4();
-        ctx.spanId = spanId;
+        const reqId = ctx.reqId = ctx.get('X-Request-Id') || uuid();
         const result = [
             `【 X-Request-Id 】${reqId}`,
-            `【 X-SpanId 】${spanId}`,
             `【 method 】${ctx.request.method}`,
             `【 path 】${ctx.path}`,
             `【 originalUrl 】${ctx.request.originalUrl}`,
         ];
-        const parentId = ctx.get('X-ParentId');
-        if (parentId) {
-            result.unshift(`【 X-ParentId 】${parentId}`);
-        }
         const scope = ctx.get('X-Authorization-Scope');
         if (scope) {
             result.unshift(`【 X-Authorization-Scope 】${scope}`);
@@ -64,18 +56,14 @@ module.exports = function(app) {
 
         const result = [
             `【 X-Response-Id 】${ctx.reqId}`,
-            `【 X-SpanId 】${ctx.spanId}`,
             `【 method 】${ctx.request.method}`,
             `【 path 】${ctx.path}`,
             `【 originalUrl 】${ctx.request.originalUrl}`,
             `【 status 】${ctx.status}`,
             `【 duration 】${duration} ms`,
         ];
+        delete ctx.reqId;
 
-        // const token = ctx.get('X-Authorization');
-        // if (token) {
-        //     result.unshift(`【 X-Authorization 】${token}`);
-        // }
         const scope = ctx.get('X-Authorization-Scope');
         if (scope) {
             result.unshift(`【 X-Authorization-Scope 】${scope}`);
@@ -101,6 +89,9 @@ module.exports = function(app) {
     };
 
     return async function loggerRequestMiddleware(ctx, next) {
+        // 清理
+        app.logger.set('SYSTEM_MESSAGE', null);
+
         const startTime = Date.now();
         const reqMessage = formatRequestMessage(ctx);
         if (Array.isArray(reqMessage)) {

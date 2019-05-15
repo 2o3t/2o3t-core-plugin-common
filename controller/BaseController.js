@@ -193,7 +193,7 @@ class BaseController {
                 Object.keys(item).forEach(key => {
                     if (typeof item[key] === 'string') {
                         if (item[key].length > 200) {
-                            item[key] = item[key].substr(0, 200);
+                            item[key] = item[key].substr(0, 200) + ' ...';
                         }
                     }
                 });

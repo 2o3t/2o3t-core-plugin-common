@@ -62,7 +62,7 @@ module.exports = function(app) {
             `【 status 】${ctx.status}`,
             `【 duration 】${duration} ms`,
         ];
-        delete ctx.reqId;
+        // delete ctx.reqId;
 
         const scope = ctx.get('X-Authorization-Scope');
         if (scope) {

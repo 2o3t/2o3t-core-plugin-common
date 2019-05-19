@@ -1,6 +1,6 @@
 {
     "name": "@2o3t-core/plugin-common",
-    "version": "0.0.61",
+    "version": "0.0.62",
     "description": "2o3t-core 通用插件",
     "main": "index.js",
     "author": "zyao89 <zyao89@gmail.com>",

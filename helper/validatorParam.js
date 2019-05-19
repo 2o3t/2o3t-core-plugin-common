@@ -34,7 +34,9 @@ function diff(key, schema, param, fnCb) {
             } else if (value.type === Number) {
                 validatorParam(param, key, 'number');
             } else if (value.type === Date) {
-                validatorParam(param, key, 'object');
+                validatorParam(param, key, value => {
+                    return value && !isNaN(Date.parse(value));
+                });
             } else {
                 validatorParam(param, key);
             }

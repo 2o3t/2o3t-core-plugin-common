@@ -29,6 +29,7 @@ module.exports = {
             'redis',
             'validatorParam',
             'healthCheckup',
+            'tunnel',
         ],
 
         redis: {

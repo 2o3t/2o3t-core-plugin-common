@@ -32,12 +32,6 @@ module.exports = function tunnel(app, opts) {
             });
         }
 
-        // 网关
-        if (params.gateway && typeof params.gateway === 'function') {
-            params.gateway(params.headers);
-        }
-        delete params.gateway;
-
         if (params.url) {
             // 自动加入 host
             try {
@@ -61,6 +55,12 @@ module.exports = function tunnel(app, opts) {
         }
 
         const bodyInfo = data || {};
+
+        // 网关
+        if (params.gateway && typeof params.gateway === 'function') {
+            params.gateway(params.headers, bodyInfo);
+        }
+        delete params.gateway;
 
         return await axios(_.merge({}, params, {
             data: bodyInfo,

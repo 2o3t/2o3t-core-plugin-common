@@ -39,7 +39,7 @@ module.exports = function(app) {
 
         const RequestId = ctx.reqId;
         if (RequestId) {
-            result.RequestId = RequestId;
+            result.ResponseId = RequestId;
         }
         ctx.body = result;
         // app.logger.info.hook(body);
